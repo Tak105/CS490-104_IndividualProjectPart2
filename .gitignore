@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 
 # My Files
-*.env
+.env
