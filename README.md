@@ -1,7 +1,9 @@
 CS490-104, Individual Project Part 2
+
 By Takaaki Takezawa and Eric Chen
 
 First time using GitHub, so please let us know if there is anything we could fix.
+
 The .env file is not available because of .gitignore in order to protect sensitive information.
 
 Front End Repo URL - https://github.com/Tak105/CS490-104_IndividualProjectPart2/tree/master/frontend
