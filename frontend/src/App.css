@@ -40,3 +40,55 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Page Background */
+body {
+  background-color: #fff9c4;
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+/* Main Container Spacing */
+.container {
+  padding: 20px;
+}
+
+/* Cards */
+.film-card,
+.actor-card {
+  background: white;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+button {
+  background-color: #add8e6;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: #87cefa;
+}
+
+.film-details {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f0f8ff;
+  border-radius: 6px;
+  border-left: 4px solid #87cefa;
+}
+
+.actor-details {
+  margin-top: 10px;
+  padding: 10px;
+  background: #e6f7ff;
+  border-radius: 6px;
+  border-left: 4px solid #87cefa;
+}
