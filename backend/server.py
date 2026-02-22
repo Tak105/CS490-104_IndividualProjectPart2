@@ -16,7 +16,7 @@ def create_app():
     def top5_films(): # Landing Page - User wants to view the top 5 rented films of all time
         films = mydb.session.execute(text("""
                                           select f.film_id, f.title, COUNT(r.rental_id) as rental_count
-                                          from film f join inventory i on f.film_id = i.film_id 
+                                          from film f join inventory i on f.film_id = i.film_id
                                           join rental r on i.inventory_id = r.inventory_id
                                           group by f.film_id, f.title
                                           order by rental_count desc
@@ -42,8 +42,8 @@ def create_app():
     def top5_actors(): # Landing Page - User wants to view the top 5 actors that are part of films in the store
         actors = mydb.session.execute(text("""
                                            select a.actor_id, a.first_name, a.last_name, COUNT(r.rental_id) as rental_count
-                                           from actor a join film_actor fa on a.actor_id = fa.actor_id 
-                                           join inventory i on fa.film_id = i.film_id 
+                                           from actor a join film_actor fa on a.actor_id = fa.actor_id
+                                           join inventory i on fa.film_id = i.film_id
                                            join rental r on i.inventory_id = r.inventory_id
                                            group by a.actor_id, a.first_name, a.last_name
                                            order by rental_count desc
@@ -66,8 +66,8 @@ def create_app():
 
         films = mydb.session.execute(text("""
                                           select f.film_id, f.title, COUNT(r.rental_id) as rental_count
-                                          from film_actor fa join film f on fa.film_id = f.film_id 
-                                          join inventory i on f.film_id = i.film_id 
+                                          from film_actor fa join film f on fa.film_id = f.film_id
+                                          join inventory i on f.film_id = i.film_id
                                           join rental r on i.inventory_id = r.inventory_id
                                           where fa.actor_id = :actor_id
                                           group by f.film_id, f.title
@@ -86,9 +86,9 @@ def create_app():
 
         films = mydb.session.execute(text("""
                                           select distinct f.film_id, f.title, f.description
-                                          from film f left join film_actor fa on f.film_id = fa.film_id 
-                                          left join actor a on fa.actor_id = a.actor_id 
-                                          left join film_category fc on f.film_id = fc.film_id 
+                                          from film f left join film_actor fa on f.film_id = fa.film_id
+                                          left join actor a on fa.actor_id = a.actor_id
+                                          left join film_category fc on f.film_id = fc.film_id
                                           left join category c on fc.category_id = c.category_id
                                           where f.title like :like
                                           or concat(a.first_name, ' ', a.last_name) like :like
@@ -134,7 +134,91 @@ def create_app():
 
         mydb.session.commit()
         return jsonify({"message": "Film Rented Successfully"}), 201
+    
+    @app.get("/api/customers")
+    def list_customers(): # Customer Page - User wants to view a list of all customers (Pagination)
+        page = request.args.get("page", 1, type=int)
+        limit = request.args.get("limit", 10, type=int)
+        offset = (page - 1) * limit
 
+        total = mydb.session.execute(text("""select count(*) as total from customer""")).mappings().first()["total"]
+        customers = mydb.session.execute(text("""
+                                              select customer_id, first_name, last_name, email, address_id, active
+                                              from customer
+                                              order by customer_id asc
+                                              limit :limit offset :offset
+                                              """), {"limit": limit, "offset": offset}).mappings().all()
+
+        return jsonify({
+            "data": [dict(c) for c in customers],
+            "total": total,
+            "page": page,
+            "total_pages": (total + limit - 1) // limit
+        }), 200
+
+    @app.get("/api/customers/search")
+    def search_customers(): # Customer Page - User wants to filter/search customers
+        page = request.args.get("page", 1, type=int)
+        limit = request.args.get("limit", 10, type=int)
+        offset = (page - 1) * limit
+
+        customer_id = request.args.get("customer_id")
+        first_name = request.args.get("first_name")
+        last_name = request.args.get("last_name")
+
+        query = """select customer_id, first_name, last_name, email, address_id, active from customer where 1=1"""
+        params = {}
+
+        if customer_id:
+            query += " and customer_id = :customer_id"
+            params["customer_id"] = customer_id
+
+        if first_name:
+            query += " and lower(first_name) like lower(:first_name)"
+            params["first_name"] = f"%{first_name}%"
+
+        if last_name:
+            query += " and lower(last_name) like lower(:last_name)"
+            params["last_name"] = f"%{last_name}%"
+        
+        query += " order by customer_id asc limit :limit offset :offset"
+        params["limit"] = limit
+        params["offset"] = offset
+        customers = mydb.session.execute(text(query), params).mappings().all()
+
+        return jsonify([dict(c) for c in customers]), 200
+
+    @app.post("/api/customers")
+    def add_customer(): # Customer Page - User wants to add new customers
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON"}), 400
+        
+        required_fields = ["store_id", "first_name", "last_name", "email", "address_id"]
+
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": "Must fill in the Required Fields"}), 400
+        try:
+            mydb.session.execute(text("""
+                                      insert into customer 
+                                      (store_id, first_name, last_name, email, address_id, active, create_date)
+                                      values
+                                      (:store_id, :first_name, :last_name, :email, :address_id, 1, now())
+                                      """), {
+                                      "store_id": data["store_id"],
+                                      "first_name": data["first_name"],
+                                      "last_name": data["last_name"],
+                                      "email": data["email"],
+                                      "address_id": data["address_id"]})
+
+            mydb.session.commit()
+            return jsonify({"message": "Customer Added Successfully"}), 201
+        
+        except Exception:
+            mydb.session.rollback()
+            return jsonify({"error": "Customer Creation Failed"}), 500
+        
     return app
 
 app = create_app()

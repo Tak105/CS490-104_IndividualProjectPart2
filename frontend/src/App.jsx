@@ -19,6 +19,25 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState([]);
 
+  // Customer Information
+  const [customers, setCustomers] = useState([]);
+  const [customerPage, setCustomerPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [searchId, setSearchId] = useState("");
+  const [searchFirst, setSearchFirst] = useState("");
+  const [searchLast, setSearchLast] = useState("");
+
+  const [newCustomer, setNewCustomer] = useState({
+    store_id: "",
+    first_name: "",
+    last_name: "",
+    email: "",
+    address_id: ""
+  });
+
+  const [customerMessage, setCustomerMessage] = useState("");
+
   // Fetch the Top 5 Rented Films and the Top 5 Actors
   useEffect(() => {
     fetch("/api/films/top5")
@@ -95,6 +114,52 @@ function App() {
     }
   }
 
+  // Fetch Customer Details
+  async function fetchCustomers(pageNum = 1) {
+    const res = await fetch(`/api/customers?page=${pageNum}&limit=10`);
+    const data = await res.json();
+
+    setCustomers(data.data);
+    setCustomerPage(data.page);
+    setTotalPages(data.total_pages);
+  }
+
+  async function handleCustomerSearch() {
+    const params = new URLSearchParams();
+
+    if (searchId) params.append("customer_id", searchId);
+    if (searchFirst) params.append("first_name", searchFirst);
+    if (searchLast) params.append("last_name", searchLast);
+
+    const res = await fetch(`/api/customers/search?${params.toString()}`);
+    const data = await res.json();
+    setCustomers(data);
+  }
+
+  async function handleAddCustomer() {
+    const res = await fetch("/api/customers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCustomer)
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setCustomerMessage("Customer Added Successfully!");
+      fetchCustomers(customerPage);
+      setNewCustomer({
+        store_id: "",
+        first_name: "",
+        last_name: "",
+        email: "",
+        address_id: ""
+      });
+    } else {
+      setCustomerMessage(data.error);
+    }
+  }
+
   // User Interface
   return (
     <div className="container">
@@ -103,6 +168,7 @@ function App() {
       <div style={{ marginBottom: "20px" }}>
         <button onClick={() => setPage("landing")}>Landing Page</button>
         <button onClick={() => setPage("films")}>Films Page</button>
+        <button onClick={() => {setPage("customers");fetchCustomers(1);}}>Customer Page</button>
       </div>
 
       {page === "landing" && (
@@ -206,6 +272,70 @@ function App() {
         </>
       )}
 
+      {page === "customers" && (
+        <>
+          <h1>Search Customers</h1>
+          <input placeholder="Customer Id" onChange={e => setSearchId(e.target.value)} />
+          <input placeholder="First Name" onChange={e => setSearchFirst(e.target.value)} />
+          <input placeholder="Last Name" onChange={e => setSearchLast(e.target.value)} />
+          <button onClick={handleCustomerSearch}>Search</button>
+          <button onClick={() => fetchCustomers(1)}>Reset</button>
+
+          <hr />
+
+          {customers.map(c => (
+            <div key={c.customer_id}>
+              <strong>{c.first_name} {c.last_name}</strong>
+              <p>{c.email}</p>
+            </div>
+          ))}
+
+          <div>
+            <button
+              disabled={customerPage === 1}
+              onClick={() => fetchCustomers(customerPage - 1)}
+            >
+              Prev
+            </button>
+
+            <span> Page {customerPage} of {totalPages} </span>
+
+            <button
+              disabled={customerPage === totalPages}
+              onClick={() => fetchCustomers(customerPage + 1)}
+            >
+              Next
+            </button>
+          </div>
+
+          <hr />
+
+          <h3>Customer to add</h3>
+          <input placeholder="Store ID"
+            value={newCustomer.store_id}
+            onChange={e => setNewCustomer({...newCustomer, store_id: e.target.value})}
+          />
+          <input placeholder="First Name"
+            value={newCustomer.first_name}
+            onChange={e => setNewCustomer({...newCustomer, first_name: e.target.value})}
+          />
+          <input placeholder="Last Name"
+            value={newCustomer.last_name}
+            onChange={e => setNewCustomer({...newCustomer, last_name: e.target.value})}
+          />
+          <input placeholder="Email"
+            value={newCustomer.email}
+            onChange={e => setNewCustomer({...newCustomer, email: e.target.value})}
+          />
+          <input placeholder="Address ID"
+            value={newCustomer.address_id}
+            onChange={e => setNewCustomer({...newCustomer, address_id: e.target.value})}
+          />
+          <button onClick={handleAddCustomer}>Submit</button>
+
+          {customerMessage && <p>{customerMessage}</p>}
+        </>
+      )}
     </div>
   );
 }
